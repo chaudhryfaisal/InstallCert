@@ -1,4 +1,4 @@
-InstallCert.java
+install-cert.jar
 
 Java program written by Andreas Sterbenz, and posted on a blog in Oct, 2006:
 https://blogs.oracle.com/gc/entry/unable_to_find_valid_certification
@@ -7,11 +7,11 @@ Link to Java program in Andreas' blog no longer works, but the source was linked
 http://nodsw.com/blog/leeland/2006/12/06-no-more-unable-find-valid-certification-path-requested-target
 
 Usage:
-Need to compile, first:
-javac InstallCert.java
+Need to build first:
+mvn package
 
 # Access server, and retrieve certificate (accept default certificate 1)
-java InstallCert [host]:[port]
+java jar distro/install-cert.jar [host]:[port]
 
 # Extract certificate from created jssecacerts keystore
 keytool -exportcert -alias [host]-1 -keystore jssecacerts -storepass changeit -file [host].cer
@@ -20,7 +20,7 @@ keytool -exportcert -alias [host]-1 -keystore jssecacerts -storepass changeit -f
 keytool -importcert -alias [host] -keystore [path to system keystore] -storepass changeit -file [host].cer
 
 # Example:
-java InstallCert woot.com:443
+java distro/install-cert.jar google.com:443
 
     Loading KeyStore /usr/lib/jvm/java-6-sun-1.6.0.26/jre/lib/security/cacerts...
     Opening connection to woot.com:443...
@@ -50,12 +50,11 @@ java InstallCert woot.com:443
     <...>
 
     Added certificate to keystore 'jssecacerts' using alias 'woot.com-1'
+    Saving [woot.com-1] to woot.com-1.crt
 
-keytool -exportcert -alias woot.com-1 -keystore jssecacerts -storepass changeit -file woot.com.cer
 
-    Certificate stored in file <woot.com.cer>
-  
-(sudo) keytool -importcert -alias woot.com -keystore /usr/lib/jvm/java-6-sun-1.6.0.26/jre/lib/security/cacerts -storepass changeit -file woot.com.cer
+    keytool -delete -alias "woot.com-1" -file "woot.com-1.crt" -storepass "changeit" -keystore "/usr/lib/jvm/java-6-sun-1.6.0.26/jre/lib/security/cacerts"
+    keytool -importcert -alias "woot.com-1" -file "woot.com-1.crt" -storepass "changeit" -keystore "/usr/lib/jvm/java-6-sun-1.6.0.26/jre/lib/security/cacerts"
 
     Owner: O=Woot Inc, C=US, ST=Texas, L=Carrollton, CN=*.woot.com
     Issuer: CN=SecureTrust CA, O=SecureTrust Corporation, C=US
