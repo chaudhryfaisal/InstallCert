@@ -25,7 +25,7 @@ java jar distro/install-cert.jar [host]:[port]
 
 * run
 ```bash
-java distro/install-cert.jar google.com:443
+java distro/install-cert.jar woot.com
 ```
 
 * follow console
