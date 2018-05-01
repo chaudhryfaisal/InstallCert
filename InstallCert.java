@@ -34,11 +34,24 @@
  * Use:
  * java InstallCert hostname
  * Example:
- *% java InstallCert ecc.fedora.redhat.com
+ * % java InstallCert ecc.fedora.redhat.com
  */
 
-import javax.net.ssl.*;
-import java.io.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.cert.CertificateException;
@@ -53,32 +66,34 @@ public class InstallCert {
     public static void main(String[] args) throws Exception {
         String host;
         int port;
-        char[] passphrase;
-        if ((args.length == 1) || (args.length == 2)) {
+        String storepass = "changeit";
+        String outputfile = null;
+        if ((args.length > 0) && (args.length <= 3)) {
             String[] c = args[0].split(":");
             host = c[0];
             port = (c.length == 1) ? 443 : Integer.parseInt(c[1]);
-            String p = (args.length == 1) ? "changeit" : args[1];
-            passphrase = p.toCharArray();
+            if (args.length > 1) storepass = args[1];
+            if (args.length > 2) outputfile = args[2];
         } else {
-            System.out.println("Usage: java InstallCert <host>[:port] [passphrase]");
+            System.out.println("Usage: java InstallCert <host>[:port] [storepass] [outputfile]");
             return;
         }
 
-        File file = new File("jssecacerts");
-        if (file.isFile() == false) {
+        File keystore = new File("jssecacerts");
+        if (!keystore.isFile()) {
             char SEP = File.separatorChar;
             File dir = new File(System.getProperty("java.home") + SEP
                     + "lib" + SEP + "security");
-            file = new File(dir, "jssecacerts");
-            if (file.isFile() == false) {
-                file = new File(dir, "cacerts");
+            keystore = new File(dir, "jssecacerts");
+            if (!keystore.isFile()) {
+                keystore = new File(dir, "cacerts");
             }
         }
-        System.out.println("Loading KeyStore " + file + "...");
-        InputStream in = new FileInputStream(file);
+
+        System.out.println("Loading KeyStore " + keystore + "...");
+        InputStream in = new FileInputStream(keystore);
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        ks.load(in, passphrase);
+        ks.load(in, storepass.toCharArray());
         in.close();
 
         SSLContext context = SSLContext.getInstance("TLS");
@@ -142,19 +157,36 @@ public class InstallCert {
 
         X509Certificate cert = chain[k];
         String alias = host + "-" + (k + 1);
-        ks.setCertificateEntry(alias, cert);
+        if (outputfile == null) outputfile = alias + ".crt";
 
-        OutputStream out = new FileOutputStream("jssecacerts");
-        ks.store(out, passphrase);
+        //Save local copy of keystore
+        ks.setCertificateEntry(alias, cert);
+        OutputStream out = new FileOutputStream("cacerts.jks");
+        ks.store(out, storepass.toCharArray());
         out.close();
 
-        System.out.println();
-        System.out.println(cert);
-        System.out.println();
-        System.out.println
-                ("Added certificate to keystore 'jssecacerts' using alias '"
-                        + alias + "'");
+        //Save Cert
+        saveToFile(outputfile, cert.getEncoded(), alias);
+
+        //Instruction to install to system keystore
+        System.out.printf("\n\nkeytool -delete -alias \"%s\" -file \"%s\" -storepass \"%s\" -keystore \"%s\"\n"
+                , alias, outputfile, storepass, keystore.getAbsolutePath());
+        System.out.printf("keytool -importcert -alias \"%s\" -file \"%s\" -storepass \"%s\" -keystore \"%s\"\n\n"
+                , alias, outputfile, storepass, keystore.getAbsolutePath());
+
     }
+
+    private static void saveToFile(String fileName, byte[] content, String message) {
+        try {
+            System.out.printf("Saving [%s] to %s\n", message, fileName);
+            FileOutputStream os = new FileOutputStream(fileName);
+            os.write(content);
+            os.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private static final char[] HEXDIGITS = "0123456789abcdef".toCharArray();
 
@@ -179,13 +211,13 @@ public class InstallCert {
         }
 
         public X509Certificate[] getAcceptedIssuers() {
-	   
-	    /** 
-	     * This change has been done due to the following resolution advised for Java 1.7+
-		http://infposs.blogspot.kr/2013/06/installcert-and-java-7.html
-       	     **/ 
-	    
-	    return new X509Certificate[0];	
+
+            /**
+             * This change has been done due to the following resolution advised for Java 1.7+
+             http://infposs.blogspot.kr/2013/06/installcert-and-java-7.html
+             **/
+
+            return new X509Certificate[0];
             //throw new UnsupportedOperationException();
         }
 
