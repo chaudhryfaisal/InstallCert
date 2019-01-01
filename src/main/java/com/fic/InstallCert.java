@@ -62,7 +62,6 @@ import java.security.cert.X509Certificate;
  * with your trusted certificates.
  */
 public class InstallCert {
-
     public static void main(String[] args) throws Exception {
         String host;
         int port;
@@ -157,6 +156,7 @@ public class InstallCert {
 
         X509Certificate cert = chain[k];
         String alias = host + "-" + (k + 1);
+        alias = cert.getSubjectDN().toString().replaceAll("[\\\\/:*?\"<>|]", "").replaceAll("[=, .-]+", "_");;
         if (outputfile == null) outputfile = alias + ".crt";
 
         //Save local copy of keystore
