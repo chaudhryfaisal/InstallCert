@@ -156,7 +156,7 @@ public class InstallCert {
 
         X509Certificate cert = chain[k];
         String alias = host + "-" + (k + 1);
-        alias = cert.getSubjectDN().toString().replaceAll("[\\\\/:*?\"<>|]", "").replaceAll("[=, .-]+", "_");;
+        alias = cert.getIssuerDN().toString().replaceAll("[\\\\/:*?\"<>|]", "").replaceAll("[=, .-]+", "_");;
         if (outputfile == null) outputfile = alias + ".crt";
 
         //Save local copy of keystore
